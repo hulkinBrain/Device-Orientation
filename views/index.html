@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Listener</title>
+    <script src="/js/aframe.min.js"></script>
+</head>
+<body>
+    <div class="metaData" style="position: absolute; z-index: 1">
+        <div class="roomID"></div>
+        <div class="accelerometerData"></div>
+    </div>
+    <a-scene background="color: #ECECEC">
+        <a-entity camera look-controls position="0 0 0"></a-entity>
+        <a-gltf-model class="spaceshipModel" position="0 0 -3" rotation="30 0 0" src="/models/spaceship.glb"></a-gltf-model>
+    </a-scene>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket = io();
+        let roomIDDiv = document.querySelector(".roomID");
+        let accelerometerDataDiv = document.querySelector('.accelerometerData');
+        // let roomID = btoa(+new Date).substr(-7,  5);
+        let roomID = "Q";
+        let spaceship = document.querySelector('.spaceshipModel');
+        roomIDDiv.innerHTML = `Room ID: ${roomID}`;
+        socket.emit('createRoom', roomID);
+        let deltaZ = 0;
+        let initial = true;
+        let orientationData = {};
+        orientationData.orientationAngle = 0;
+        socket.on('accelerometerData', (orientData) => {
+            orientationData.z = orientData.z;
+            orientationData.y = orientData.y;
+            orientationData.x = orientData.x;
+            orientShip(orientData);
+        });
+        socket.on('orientationAngle', (orientationAngle) => {
+            orientationData.orientationAngle = orientationAngle;
+            initial = true
+        });
+        socket.on('disconnected', (data) => {
+            console.log(`${data.clientId} disconnected`);
+        });
+        function orientShip(orientData) {
+            if (initial) {
+                deltaZ = orientData.z;
+                initial = false;
+                spaceship.object3D.rotation.set(
+                    THREE.Math.degToRad(0),
+                    THREE.Math.degToRad(-90),
+                    THREE.Math.degToRad(0)
+                );
+            }
+            orientData.z -= deltaZ;
+            if(orientationData.orientationAngle === 0) {
+                spaceship.object3D.rotation.set(
+                    THREE.Math.degToRad(orientData.x),
+                    THREE.Math.degToRad(orientData.z),
+                    THREE.Math.degToRad(-orientData.y)
+                );
+                accelerometerDataDiv.innerText = `z: ${orientData.x} \n y: ${orientData.z} \n x: ${-orientData.y}`;
+            }
+            else if(orientationData.orientationAngle === 90) {
+                spaceship.object3D.rotation.set(
+                    THREE.Math.degToRad(orientData.x),
+                    THREE.Math.degToRad(orientData.z),
+                    THREE.Math.degToRad(-orientData.y)
+                );
+                // spaceship.object3D.rotation.set(
+                //     THREE.Math.degToRad(-orientData.y),
+                //     THREE.Math.degToRad(orientData.z),
+                //     THREE.Math.degToRad(-orientData.x)
+                // );
+                // accelerometerDataDiv.innerText = JSON.stringify(spaceship.object3D.rotation);
+                accelerometerDataDiv.innerText = `z: ${-orientData.y} \n y: ${orientData.z} \n x: ${-orientData.x}`;
+            }
+            else if(orientationData.orientationAngle === 270) {
+                spaceship.object3D.rotation.set(
+                    THREE.Math.degToRad(orientData.y),
+                    THREE.Math.degToRad(orientData.z),
+                    THREE.Math.degToRad(orientData.x)
+                );
+                accelerometerDataDiv.innerText = `z: ${orientData.y} \n y: ${orientData.z} \n x: ${orientData.x}`;
+            }
+        }
+    </script>
+</body>
+</html>

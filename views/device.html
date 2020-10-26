@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <button id="test">Press me senpai</button>
+    <label for="roomIDInput">
+        Room ID:
+        <input type="text" class="roomID" id="roomIDInput" name="roomIDInput" value="Q"/>
+    </label>
+    <div class="orientation"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket = io();
+        let qq = {"jsonrpc": 2.0, "method": "OptiTrackMessage", "params": {"x": 1.4, "y": 5.5, "z": 6.6, "name": "Blitzi", "deviceType": "Desktop"}, "id": 0};
+        let testButton = document.querySelector('#test');
+        let orientation = document.querySelector('.orientation');
+        testButton.onclick = () => {
+            let roomID = document.querySelector('#roomIDInput').value;
+            socket.emit('enterRoom', roomID);
+            startPolling();
+        }
+
+        function startPolling() {
+            if(window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', (e) => {
+                    let orientData = {
+                        z: e.alpha,
+                        x: e.beta,
+                        y: e.gamma,
+                        orientation: screen.orientation.angle
+                    }
+                    socket.emit('deviceAccelerometerUpdate', orientData);
+                }, true);
+            }
+            window.addEventListener('orientationchange', (e) => {
+                orientation.innerHTML = screen.orientation.angle.toString();
+                socket.emit('deviceOrientationChange', screen.orientation.angle);
+            }, true);
+        }
+    </script>
+</body>
+</html>
